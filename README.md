@@ -4,3 +4,4 @@ Group members -
 Wei Guo
 Harsh Tripathi
 Xinyue Zhang
+Xenia Huber
