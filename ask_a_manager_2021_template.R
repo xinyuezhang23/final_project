@@ -56,6 +56,23 @@ country_iso3 <-  ask_a_manager_2021_new %>%
 #bind them with right country codes
 ask_a_manager_2021_new <- bind_cols(ask_a_manager_2021_new, country_iso3)
 
+industry_list<-ask_a_manager_2021_new %>% 
+        group_by(industry) %>% 
+        count(sort=TRUE) %>% 
+        filter(n > 100) %>% 
+        select(industry) %>% pull()
+ask_a_manager_2021_new<-ask_a_manager_2021_new %>% 
+     filter(industry %in% industry_list)
+
+race_list<-ask_a_manager_2021_new %>% 
+  group_by(race) %>% 
+  count(sort=TRUE) %>% 
+  filter(!is.na(race),n>100) %>% 
+  select(race) %>% pull()
+ask_a_manager_2021_cleaned<-ask_a_manager_2021_new %>% 
+  filter(race %in% race_list)
+
+
 # How is salary distributed?
 
 ggplot(ask_a_manager_2021, aes(x=annual_salary))+
