@@ -277,11 +277,126 @@ After viewing the data distribution in survey level, let's dig into salary in US
 
 ```{r}
 #delete country and rename country value as iso3, filter USA
-cleaned_us<-
+us_data <-
   ask_a_manager_2021_cleaned %>% 
   select(-country) %>% 
   rename(iso3=value) %>% 
   filter(iso3== "USA")
 
+us_data <- us_data %>%
+  filter(annual_salary > 10000, annual_salary <= 1000000) %>% 
+  mutate(
+    log_salary = log(annual_salary)
+    ) %>% 
+  drop_na()
 ```
+
+
+```{r, fig.width=12}
+us_data %>% 
+  group_by(gender) %>% 
+  summarize(
+    mean_salary = mean(annual_salary)
+  ) %>% 
+  
+  ggplot(aes(x = reorder(gender, -mean_salary), y = mean_salary)) +
+  geom_col()
+```
+
+
+```{r}
+#Cleaning the race variable
+us_data <- us_data %>% 
+  mutate(
+    race_cleaned = case_when(
+      race %in% c('Asian or Asian American', 'Asian or Asian American, White') ~ 'Asian or Asian American',
+      race %in% c('Black or African American', 'Black or African American, White') ~ 'Black or African American',
+      race %in% c('Hispanic, Latino, or Spanish origin', 'Hispanic, Latino, or Spanish origin, White') ~ 'Hispanic, Latino, or Spanish origin',
+      race == "Another option not listed here or prefer not to answer" ~ "Others/Prefer not to say",
+      TRUE ~ race
+    )
+  )
+```
+
+```{r, fig.width=12}
+us_data %>% 
+  group_by(race_cleaned) %>% 
+  summarize(
+    mean_salary = mean(annual_salary)
+  ) %>% 
+  
+  ggplot(aes(x = reorder(race_cleaned, -mean_salary), y = mean_salary)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+```
+
+
+```{r, fig.width=12}
+top_industries <- us_data %>% 
+  group_by(industry) %>% 
+  count(sort = TRUE) %>% 
+  head(10) %>% 
+  select(industry) %>% 
+  pull()
+
+
+us_data %>%
+  filter(industry %in% top_industries) %>% 
+  group_by(industry) %>% 
+  summarize(
+    mean_salary = mean(annual_salary)
+  ) %>% 
+  
+  ggplot(aes(x = reorder(industry, -mean_salary), y = mean_salary)) +
+  geom_col() +
+ theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+```
+
+
+```{r, fig.width = 12}
+us_data %>%
+  group_by(overall_experience) %>% 
+  summarize(
+    mean_salary = mean(annual_salary)
+  ) %>% 
+  
+  ggplot(aes(x = overall_experience, y = mean_salary)) +
+  geom_col()
+```
+
+```{r, fig.width = 12}
+us_data %>%
+  group_by(age) %>% 
+  summarize(
+    mean_salary = mean(annual_salary)
+  ) %>% 
+  
+  ggplot(aes(x = age, y = mean_salary)) +
+  geom_col()
+```
+
+
+```{r, fig.width = 12}
+us_data %>%
+  group_by(field_experience) %>% 
+  summarize(
+    mean_salary = mean(annual_salary)
+  ) %>% 
+  
+  ggplot(aes(x = field_experience, y = mean_salary)) +
+  geom_col()
+```
+
+
+```{r, fig.width = 12}
+us_data %>%
+  group_by(education_level) %>% 
+  summarize(
+    mean_salary = mean(annual_salary)
+  ) %>% 
+  
+  ggplot(aes(x = education_level, y = mean_salary)) +
+  geom_col()
+```
+
 
