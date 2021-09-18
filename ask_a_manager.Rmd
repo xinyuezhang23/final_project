@@ -117,115 +117,171 @@ ask_a_manager_2021_cleaned<-ask_a_manager_2021_new %>%
   filter(race %in% race_list)
 
 ```
+```{r}
+skim(ask_a_manager_2021_cleaned)
+```
 
 
 ```{r }
+# problems need to be solved
 # How is salary distributed?
-ggplot(ask_a_manager_2021, aes(x=annual_salary))+
+ggplot(ask_a_manager_2021_cleaned, aes(x=annual_salary))+
   geom_density()
 
-ggplot(ask_a_manager_2021, aes(x=annual_salary))+
+ggplot(ask_a_manager_2021_cleaned, aes(x=annual_salary))+
   stat_ecdf()
 ```
 
 
 ```{r }
+# problems need to be solved
 # what about log(salary)? 
-ggplot(ask_a_manager_2021, aes(x=log(annual_salary)))+
+ggplot(ask_a_manager_2021_cleaned, aes(x=log(annual_salary)))+
   geom_density()
 
 
-ggplot(ask_a_manager_2021, aes(x=log(annual_salary)))+
+ggplot(ask_a_manager_2021_cleaned, aes(x=log(annual_salary)))+
   stat_ecdf()
 
 # Which one (salary vs. log(salary)) is better to use in a regression model? Why?
 ```
 
 
-```{r }
-# Some quick counts, groups, etc
 
-ask_a_manager_2021 %>% 
-  count(how_old_are_you, sort=TRUE) %>% 
-  mutate(percent = 100* n/sum(n))
+```{r }
+# age distribution in the survey
+ask_a_manager_2021_cleaned %>% 
+  count(age) %>% 
+  mutate(percent = 100* n/sum(n)) %>% 
+  ggplot(aes(x=age,y=percent)) +
+  geom_col()+
+  theme_bw()
 ```
 
 
 ```{r }
 # Industry is messy... it has > 1000 different industries  
-ask_a_manager_2021 %>% 
+ask_a_manager_2021_cleaned %>% 
   count(industry, sort=TRUE) %>% 
-  mutate(percent = 100* n/sum(n))
+  mutate(percent = 100* n/sum(n)) %>% 
+  top_n(25) %>% 
+  ggplot(aes(y=fct_reorder(industry,n),x= n))+
+  geom_col()+
+  theme_bw()+
+  # theme(axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5))+
+  NULL
 ```
 
 
 ```{r }
 # Most of 'currency' is USD
-ask_a_manager_2021 %>% 
+ask_a_manager_2021_cleaned %>% 
   count(currency, sort=TRUE) %>% 
-  mutate(percent = 100* n/sum(n))
+  mutate(percent = 100* n/sum(n)) %>% 
+  ggplot(aes(y=fct_reorder(currency,n),x= n))+
+  geom_col()+
+  theme_bw()+
+  NULL
+  
 ```
 
 
 ```{r }
 # 'country' 
-ask_a_manager_2021 %>% 
-  count(country, sort=TRUE) %>% 
-  mutate(percent = 100* n/sum(n))
-
+ask_a_manager_2021_cleaned %>% 
+  filter(!is.na(value)) %>% 
+  count(value, sort=TRUE) %>% 
+  mutate(percent = 100* n/sum(n)) %>%
+  top_n(10) %>% 
+  ggplot(aes(y=fct_reorder(value,n),x= n))+
+  geom_col()+
+  theme_bw()+
+  NULL
 # use countrycode::countryname() to clean country names
 ```
 
 
 ```{r }
 # 'city' 
-ask_a_manager_2021 %>% 
+ask_a_manager_2021_cleaned %>% 
   count(city, sort=TRUE) %>% 
-  mutate(percent = 100* n/sum(n))
+  # mutate(percent = 100* n/sum(n)) %>% 
+  top_n(15) %>% 
+  ggplot(aes(y=fct_reorder(city,n),x= n))+
+  geom_col()+
+  theme_bw()+
+  NULL
 ```
 
 
 ```{r }
-# highest_level_of_education_completed 
-ask_a_manager_2021 %>% 
-  count(highest_level_of_education_completed) %>% 
-  mutate(percent = 100* n/sum(n))%>% 
-  arrange(desc(percent))
+# education
+ask_a_manager_2021_cleaned %>% 
+  filter(!is.na(education_level)) %>% 
+  count(education_level) %>% 
+  ggplot(aes(x=education_level,y= n))+
+  geom_col()+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
 ```
 
 
 ```{r }
 # gender
-ask_a_manager_2021 %>% 
+ask_a_manager_2021_cleaned %>% 
+  filter(gender %in% c("Woman","Man","Non-binary")) %>% 
   count(gender) %>% 
-  mutate(percent = 100* n/sum(n))%>% 
-  arrange(desc(percent))
+  ggplot(aes(x=fct_reorder(gender,n),y = n))+
+  geom_col()+
+  theme_bw()+
+  NULL
 ```
 
 
 ```{r }
 # race
-ask_a_manager_2021 %>% 
+ask_a_manager_2021_cleaned %>% 
   count(race) %>% 
-  mutate(percent = 100* n/sum(n))%>% 
-  arrange(desc(percent))
+  ggplot(aes(y=fct_reorder(race,n),x = n))+
+  geom_col()+
+  theme_bw()+
+  NULL
+
 ```
 
 
 ```{r }
 # overall_years_of_professional_experience 
-ask_a_manager_2021 %>% 
-  count(overall_years_of_professional_experience ) %>% 
-  mutate(percent = 100* n/sum(n))%>% 
-  arrange(desc(percent))
+ask_a_manager_2021_cleaned %>% 
+  count(overall_experience ) %>% 
+  ggplot(aes(x=overall_experience,y = n))+
+  geom_col()+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
 ```
 
 
 ```{r }
 # years_of_experience_in_field  
-ask_a_manager_2021 %>% 
-  count(years_of_experience_in_field  ) %>% 
-  mutate(percent = 100* n/sum(n))%>% 
-  arrange(desc(percent))
+ask_a_manager_2021_cleaned %>% 
+  count(field_experience  ) %>% 
+  ggplot(aes(x=field_experience,y = n))+
+  geom_col()+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+```
+After viewing the data distribution in survey level, let's dig into salary in US.
+
+```{r}
+#delete country and rename country value as iso3, filter USA
+cleaned_us<-
+  ask_a_manager_2021_cleaned %>% 
+  select(-country) %>% 
+  rename(iso3=value) %>% 
+  filter(iso3== "USA")
+
 ```
 
