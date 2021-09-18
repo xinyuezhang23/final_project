@@ -20,7 +20,7 @@ library(stringr)
 # if googlesheets is now working, read local copy
 ask_a_manager_2021 <- read_csv(here::here("data", "ask_a_manager_2021.csv")) %>% 
   janitor::clean_names()
-
+  
 
 skimr::skim(ask_a_manager_2021)
 
@@ -33,12 +33,12 @@ ask_a_manager_2021_new <- ask_a_manager_2021 %>%
                     labels =c("under 18","18-24","25-34","35-44","45-54","55-64","65 or over") ,ordered = TRUE),
          overall_experience=factor(overall_experience,levels=c("1 year or less","2 - 4 years","5-7 years","8 - 10 years",
                                                                "11 - 20 years","21 - 30 years","31 - 40 years","41 years or more"),
+                    labels =c("less than 1 year","2-4 years","5-7 years","8-10 years",
+                              "11-20 years","21-30 years","31-40 years","41 years or more") ,ordered = TRUE),
+         field_experience=factor(field_experience,levels=c("1 year or less","2 - 4 years","5-7 years","8 - 10 years",
+                                                               "11 - 20 years","21 - 30 years","31 - 40 years","41 years or more"),
                                    labels =c("less than 1 year","2-4 years","5-7 years","8-10 years",
                                              "11-20 years","21-30 years","31-40 years","41 years or more") ,ordered = TRUE),
-         field_experience=factor(field_experience,levels=c("1 year or less","2 - 4 years","5-7 years","8 - 10 years",
-                                                           "11 - 20 years","21 - 30 years","31 - 40 years","41 years or more"),
-                                 labels =c("less than 1 year","2-4 years","5-7 years","8-10 years",
-                                           "11-20 years","21-30 years","31-40 years","41 years or more") ,ordered = TRUE),
          education_level=factor(education_level,levels=c("High School","Some college","College degree",
                                                          "Master's degree","PhD","Professional degree (MD, JD, etc.)"),
                                 labels =c("High School","Some college","College degree",
@@ -57,12 +57,12 @@ country_iso3 <-  ask_a_manager_2021_new %>%
 ask_a_manager_2021_new <- bind_cols(ask_a_manager_2021_new, country_iso3)
 
 industry_list<-ask_a_manager_2021_new %>% 
-  group_by(industry) %>% 
-  count(sort=TRUE) %>% 
-  filter(n > 100) %>% 
-  select(industry) %>% pull()
+        group_by(industry) %>% 
+        count(sort=TRUE) %>% 
+        filter(n > 100) %>% 
+        select(industry) %>% pull()
 ask_a_manager_2021_new<-ask_a_manager_2021_new %>% 
-  filter(industry %in% industry_list)
+     filter(industry %in% industry_list)
 
 race_list<-ask_a_manager_2021_new %>% 
   group_by(race) %>% 

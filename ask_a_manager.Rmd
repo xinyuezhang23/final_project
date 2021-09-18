@@ -1,3 +1,34 @@
+---
+title: "AM01 Final Project Group 4"
+author: "Study Group 4 - Harsh Tripathi, Nikolaos Panayotou, Wei Guo, Xenia Huber, Xinyue Zhang"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: flatly
+    highlight: zenburn
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: show
+---
+
+```{r, setup, echo=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, 
+  warning = FALSE, 
+  tidy=FALSE,     # display code as typed
+  size="small")   # slightly smaller font for code
+options(digits = 3)
+
+# default figure size
+knitr::opts_chunk$set(
+  fig.width=6.75, 
+  fig.height=6.75,
+  fig.align = "center"
+)
+```
+
+```{r load-libraries, echo=FALSE}
 library(googlesheets4)
 library(tidyverse)
 library(janitor) 
@@ -7,7 +38,18 @@ library(broom)
 library(car)
 library(ggfortify)
 library(stringr)
+library(mosaic)
+library(ggthemes)
+library(GGally)
+library(readxl)
+library(here)
+library(tidyquant)
+library(infer)
+library(openintro)
+```
 
+
+```{r load_data}
 # use googlesheets4 to get data
 # url <- "https://docs.google.com/spreadsheets/d/1IPS5dBSGtwYVbjsfbaMCYIWnOuRmJcbequohNxCyGVw/edit?resourcekey#gid=1625408792"
 # googlesheets4::gs4_auth() # google sheets authorisation
@@ -20,10 +62,13 @@ library(stringr)
 # if googlesheets is now working, read local copy
 ask_a_manager_2021 <- read_csv(here::here("data", "ask_a_manager_2021.csv")) %>% 
   janitor::clean_names()
-
+  
 
 skimr::skim(ask_a_manager_2021)
+```
 
+
+```{r data_cleaning}
 #data cleaning
 ask_a_manager_2021_new <- ask_a_manager_2021 %>% 
   rename(age=how_old_are_you,overall_experience=overall_years_of_professional_experience,
@@ -33,12 +78,11 @@ ask_a_manager_2021_new <- ask_a_manager_2021 %>%
                     labels =c("under 18","18-24","25-34","35-44","45-54","55-64","65 or over") ,ordered = TRUE),
          overall_experience=factor(overall_experience,levels=c("1 year or less","2 - 4 years","5-7 years","8 - 10 years",
                                                                "11 - 20 years","21 - 30 years","31 - 40 years","41 years or more"),
-                                   labels =c("less than 1 year","2-4 years","5-7 years","8-10 years",
+                    labels =c("less than 1 year","2-4 years","5-7 years","8-10 years",
+                              "11-20 years","21-30 years","31-40 years","41 years or more") ,ordered = TRUE),
+         field_experience=factor(field_experience,levels=c("1 year or less","2 - 4 years","5-7 years","8 - 10 years","11 - 20 years","21 - 30 years","31 - 40 years","41 years or more"),
+                      labels =c("less than 1 year","2-4 years","5-7 years","8-10 years",
                                              "11-20 years","21-30 years","31-40 years","41 years or more") ,ordered = TRUE),
-         field_experience=factor(field_experience,levels=c("1 year or less","2 - 4 years","5-7 years","8 - 10 years",
-                                                           "11 - 20 years","21 - 30 years","31 - 40 years","41 years or more"),
-                                 labels =c("less than 1 year","2-4 years","5-7 years","8-10 years",
-                                           "11-20 years","21-30 years","31-40 years","41 years or more") ,ordered = TRUE),
          education_level=factor(education_level,levels=c("High School","Some college","College degree",
                                                          "Master's degree","PhD","Professional degree (MD, JD, etc.)"),
                                 labels =c("High School","Some college","College degree",
@@ -57,12 +101,12 @@ country_iso3 <-  ask_a_manager_2021_new %>%
 ask_a_manager_2021_new <- bind_cols(ask_a_manager_2021_new, country_iso3)
 
 industry_list<-ask_a_manager_2021_new %>% 
-  group_by(industry) %>% 
-  count(sort=TRUE) %>% 
-  filter(n > 100) %>% 
-  select(industry) %>% pull()
+        group_by(industry) %>% 
+        count(sort=TRUE) %>% 
+        filter(n > 100) %>% 
+        select(industry) %>% pull()
 ask_a_manager_2021_new<-ask_a_manager_2021_new %>% 
-  filter(industry %in% industry_list)
+     filter(industry %in% industry_list)
 
 race_list<-ask_a_manager_2021_new %>% 
   group_by(race) %>% 
@@ -72,16 +116,20 @@ race_list<-ask_a_manager_2021_new %>%
 ask_a_manager_2021_cleaned<-ask_a_manager_2021_new %>% 
   filter(race %in% race_list)
 
+```
 
+
+```{r }
 # How is salary distributed?
-
 ggplot(ask_a_manager_2021, aes(x=annual_salary))+
   geom_density()
 
-
 ggplot(ask_a_manager_2021, aes(x=annual_salary))+
   stat_ecdf()
+```
 
+
+```{r }
 # what about log(salary)? 
 ggplot(ask_a_manager_2021, aes(x=log(annual_salary)))+
   geom_density()
@@ -90,66 +138,94 @@ ggplot(ask_a_manager_2021, aes(x=log(annual_salary)))+
 ggplot(ask_a_manager_2021, aes(x=log(annual_salary)))+
   stat_ecdf()
 
-
 # Which one (salary vs. log(salary)) is better to use in a regression model? Why?
+```
 
 
+```{r }
 # Some quick counts, groups, etc
 
 ask_a_manager_2021 %>% 
   count(how_old_are_you, sort=TRUE) %>% 
   mutate(percent = 100* n/sum(n))
+```
 
 
+```{r }
 # Industry is messy... it has > 1000 different industries  
 ask_a_manager_2021 %>% 
   count(industry, sort=TRUE) %>% 
   mutate(percent = 100* n/sum(n))
+```
 
+
+```{r }
 # Most of 'currency' is USD
 ask_a_manager_2021 %>% 
   count(currency, sort=TRUE) %>% 
   mutate(percent = 100* n/sum(n))
+```
 
+
+```{r }
 # 'country' 
 ask_a_manager_2021 %>% 
   count(country, sort=TRUE) %>% 
   mutate(percent = 100* n/sum(n))
 
 # use countrycode::countryname() to clean country names
+```
 
 
+```{r }
 # 'city' 
 ask_a_manager_2021 %>% 
   count(city, sort=TRUE) %>% 
   mutate(percent = 100* n/sum(n))
+```
 
+
+```{r }
 # highest_level_of_education_completed 
 ask_a_manager_2021 %>% 
   count(highest_level_of_education_completed) %>% 
   mutate(percent = 100* n/sum(n))%>% 
   arrange(desc(percent))
+```
 
+
+```{r }
 # gender
 ask_a_manager_2021 %>% 
   count(gender) %>% 
   mutate(percent = 100* n/sum(n))%>% 
   arrange(desc(percent))
+```
 
+
+```{r }
 # race
 ask_a_manager_2021 %>% 
   count(race) %>% 
   mutate(percent = 100* n/sum(n))%>% 
   arrange(desc(percent))
+```
 
+
+```{r }
 # overall_years_of_professional_experience 
 ask_a_manager_2021 %>% 
   count(overall_years_of_professional_experience ) %>% 
   mutate(percent = 100* n/sum(n))%>% 
   arrange(desc(percent))
+```
 
+
+```{r }
 # years_of_experience_in_field  
 ask_a_manager_2021 %>% 
   count(years_of_experience_in_field  ) %>% 
   mutate(percent = 100* n/sum(n))%>% 
   arrange(desc(percent))
+```
+
