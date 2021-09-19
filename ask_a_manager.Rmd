@@ -90,15 +90,16 @@ ask_a_manager_2021_new <- ask_a_manager_2021 %>%
          gender=case_when(gender=="Other or prefer not to answer"|gender=="Prefer not to answer"|is.na(gender)~"Don't know or NA",
                           TRUE~gender),state=ifelse(str_detect(state,",")|is.na(state),"NA",state))
 #sort out country
-country_iso3 <-  ask_a_manager_2021_new %>% 
-  select(country) %>% 
-  pull() %>% 
-  countrycode(
-    origin = "country.name",
-    destination = 'iso3c') %>% 
-  as_tibble()
-#bind them with right country codes
-ask_a_manager_2021_new <- bind_cols(ask_a_manager_2021_new, country_iso3)
+# First we need to convert country name to iso3c
+ask_a_manager_2021_new$iso3c <-countrycode(
+  ask_a_manager_2021_new$country,
+  origin = "country.name", destination = "iso3c")
+# then change it back to country name
+ask_a_manager_2021_new$country <-countrycode(
+  ask_a_manager_2021_new$iso3c,
+  origin = "iso3c", destination = "country.name")
+
+
 
 industry_list<-ask_a_manager_2021_new %>% 
         group_by(industry) %>% 
@@ -113,20 +114,32 @@ race_list<-ask_a_manager_2021_new %>%
   count(sort=TRUE) %>% 
   filter(!is.na(race),n>100) %>% 
   select(race) %>% pull()
-ask_a_manager_2021_cleaned<-ask_a_manager_2021_new %>% 
+ask_a_manager_2021_new<-ask_a_manager_2021_new %>% 
   filter(race %in% race_list)
 
 ```
+
 ```{r}
-skim(ask_a_manager_2021_cleaned)
+skim(ask_a_manager_2021_new)
 ```
 
+```{r cleaned_data}
+#drop_na
+ask_a_manager_2021_cleaned<-
+  ask_a_manager_2021_new %>%  drop_na()
+#filter
+ask_a_manager_2021_cleaned<-
+  ask_a_manager_2021_cleaned %>% 
+  filter(annual_salary>10000&annual_salary<1000000)
+
+skim(ask_a_manager_2021_cleaned)
+```
 
 ```{r }
 # problems need to be solved
 # How is salary distributed?
 ggplot(ask_a_manager_2021_cleaned, aes(x=annual_salary))+
-  geom_density()
+  geom_boxplot()
 
 ggplot(ask_a_manager_2021_cleaned, aes(x=annual_salary))+
   stat_ecdf()
@@ -152,10 +165,14 @@ ggplot(ask_a_manager_2021_cleaned, aes(x=log(annual_salary)))+
 # age distribution in the survey
 ask_a_manager_2021_cleaned %>% 
   count(age) %>% 
-  mutate(percent = 100* n/sum(n)) %>% 
-  ggplot(aes(x=age,y=percent)) +
+  ggplot(aes(x=age,y=n,fill=age)) +
   geom_col()+
-  theme_bw()
+  labs(x="Age group", 
+       y="Count")+
+  geom_text(aes(label=n),size=3,vjust=-0.25)+
+  theme_bw()+
+  scale_fill_brewer(palette = "Blues")+
+  guides(fill=FALSE)
 ```
 
 
@@ -164,12 +181,16 @@ ask_a_manager_2021_cleaned %>%
 ask_a_manager_2021_cleaned %>% 
   count(industry, sort=TRUE) %>% 
   mutate(percent = 100* n/sum(n)) %>% 
-  top_n(25) %>% 
-  ggplot(aes(y=fct_reorder(industry,n),x= n))+
+  filter(n>=500) %>% 
+  ggplot(aes(x=fct_reorder(industry,n,.desc = TRUE),y= n,fill=industry))+
   geom_col()+
+  geom_text(aes(label=n),size=3,vjust=-0.25)+
+    labs(x="Industry", 
+       y="Count",
+       title="Industries with >500 repondents")+
   theme_bw()+
-  # theme(axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5))+
-  NULL
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))+
+  guides(fill=FALSE)
 ```
 
 
@@ -178,24 +199,26 @@ ask_a_manager_2021_cleaned %>%
 ask_a_manager_2021_cleaned %>% 
   count(currency, sort=TRUE) %>% 
   mutate(percent = 100* n/sum(n)) %>% 
-  ggplot(aes(y=fct_reorder(currency,n),x= n))+
+  ggplot(aes(x=fct_reorder(currency,n,.desc=TRUE),y= n,fill=currency))+
   geom_col()+
+  labs(x="Currency Paid", 
+       y="Count")+
+  geom_text(aes(label=n),size=3,vjust=-0.25)+
   theme_bw()+
-  NULL
-  
+  guides(fill=FALSE)
 ```
 
 
 ```{r }
 # 'country' 
 ask_a_manager_2021_cleaned %>% 
-  filter(!is.na(value)) %>% 
-  count(value, sort=TRUE) %>% 
-  mutate(percent = 100* n/sum(n)) %>%
+  count(country, sort=TRUE) %>% 
   top_n(10) %>% 
-  ggplot(aes(y=fct_reorder(value,n),x= n))+
+  ggplot(aes(y=fct_reorder(country,n),x= n))+
   geom_col()+
   theme_bw()+
+  labs(x="Count", 
+       y="Country")+
   NULL
 # use countrycode::countryname() to clean country names
 ```
@@ -210,6 +233,8 @@ ask_a_manager_2021_cleaned %>%
   ggplot(aes(y=fct_reorder(city,n),x= n))+
   geom_col()+
   theme_bw()+
+  labs(x="Count", 
+       y="City")+
   NULL
 ```
 
@@ -219,9 +244,13 @@ ask_a_manager_2021_cleaned %>%
 ask_a_manager_2021_cleaned %>% 
   filter(!is.na(education_level)) %>% 
   count(education_level) %>% 
-  ggplot(aes(x=education_level,y= n))+
+  ggplot(aes(x=education_level,y= n,fill=education_level))+
   geom_col()+
   theme_bw()+
+  labs(x= "Education level",y="Count")+
+  scale_fill_brewer(palette = "Blues")+
+  geom_text(aes(label=n),size=3,vjust=-0.25)+
+  guides(fill=FALSE)+
   theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
 ```
@@ -232,9 +261,13 @@ ask_a_manager_2021_cleaned %>%
 ask_a_manager_2021_cleaned %>% 
   filter(gender %in% c("Woman","Man","Non-binary")) %>% 
   count(gender) %>% 
-  ggplot(aes(x=fct_reorder(gender,n),y = n))+
+  ggplot(aes(x=fct_reorder(gender,n,.desc=TRUE),y = n,fill=gender))+
   geom_col()+
   theme_bw()+
+  scale_fill_brewer(palette = "Blues")+
+  geom_text(aes(label=n),size=3,vjust=-0.25)+
+  guides(fill=FALSE)+
+  labs(x="Gender",y="Count")+
   NULL
 ```
 
@@ -242,11 +275,16 @@ ask_a_manager_2021_cleaned %>%
 ```{r }
 # race
 ask_a_manager_2021_cleaned %>% 
+  filter(!is.na(race)) %>% 
   count(race) %>% 
-  ggplot(aes(y=fct_reorder(race,n),x = n))+
+  ggplot(aes(x=fct_reorder(race,n,.desc=TRUE),y= n,fill=race))+
   geom_col()+
   theme_bw()+
-  NULL
+  labs(x= "Race",y="Count")+
+  scale_fill_brewer(palette = "Blues")+
+  geom_text(aes(label=n),size=3,vjust=-0.25)+
+  guides(fill=FALSE)+
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
 ```
 
@@ -258,6 +296,7 @@ ask_a_manager_2021_cleaned %>%
   ggplot(aes(x=overall_experience,y = n))+
   geom_col()+
   theme_bw()+
+  geom_text(aes(label=n),size=3,vjust=-0.25)+
   theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
 ```
@@ -270,6 +309,7 @@ ask_a_manager_2021_cleaned %>%
   ggplot(aes(x=field_experience,y = n))+
   geom_col()+
   theme_bw()+
+  geom_text(aes(label=n),size=3,vjust=-0.25)+
   theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
 ```
@@ -280,11 +320,9 @@ After viewing the data distribution in survey level, let's dig into salary in US
 us_data <-
   ask_a_manager_2021_cleaned %>% 
   select(-country) %>% 
-  rename(iso3=value) %>% 
-  filter(iso3== "USA")
+  filter(iso3c== "USA")
 
 us_data <- us_data %>%
-  filter(annual_salary > 10000, annual_salary <= 1000000) %>% 
   mutate(
     log_salary = log(annual_salary)
     ) %>% 
